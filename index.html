@@ -1,0 +1,1255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#080c12">
+<title>EOL Monitor</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ── RESET & VARS ── */
+:root{
+  --bg:#080c12;--bg2:#0e1520;--bg3:#161e2e;
+  --border:#1e2d45;--border2:#2a3f5f;
+  --text:#c8d8f0;--text2:#6a85a8;--text3:#3a5070;
+  --accent:#00d4ff;--accent2:#0099bb;
+  --green:#00e57a;--yellow:#ffd240;--red:#ff4060;
+  --mono:'Space Mono',monospace;--sans:'DM Sans',sans-serif;
+  --radius:14px;--safe-bottom:env(safe-area-inset-bottom,0px);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow:hidden}
+body{font-family:var(--sans);background:var(--bg);color:var(--text);display:flex;flex-direction:column}
+body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,212,255,.01) 2px,rgba(0,212,255,.01) 4px);pointer-events:none;z-index:0}
+
+/* ── SCREENS ── */
+.screen{display:none;flex-direction:column;height:100%;overflow:hidden;position:relative;z-index:1}
+.screen.active{display:flex}
+
+/* ── SCROLLABLE BODY ── */
+.scroll-body{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:20px 16px calc(20px + var(--safe-bottom))}
+
+/* ── LOGIN ── */
+#s-login{align-items:center;justify-content:center;background:radial-gradient(ellipse 70% 50% at 50% 0%,rgba(0,180,255,.1),transparent 70%),var(--bg)}
+.login-wrap{width:100%;max-width:380px;padding:0 16px;animation:fadeUp .4s ease both}
+@keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+.logo-block{text-align:center;margin-bottom:32px}
+.logo-icon{display:inline-flex;align-items:center;justify-content:center;width:64px;height:64px;border-radius:20px;background:linear-gradient(135deg,var(--accent2),var(--accent));font-size:1.8rem;margin-bottom:14px;box-shadow:0 0 32px rgba(0,212,255,.35)}
+.logo-title{font-family:var(--mono);font-size:1rem;color:var(--accent);letter-spacing:3px}
+.logo-sub{font-size:.72rem;color:var(--text2);margin-top:4px;letter-spacing:1px}
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:24px}
+.field-lbl{font-size:.65rem;font-family:var(--mono);color:var(--text2);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px}
+.role-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px}
+.role-btn{padding:16px 8px;border-radius:12px;border:1px solid var(--border);background:var(--bg3);color:var(--text2);font-family:var(--mono);font-size:.72rem;letter-spacing:1px;cursor:pointer;transition:all .2s;text-align:center;-webkit-user-select:none;user-select:none}
+.role-btn .icon{font-size:1.4rem;display:block;margin-bottom:6px}
+.role-btn.sel{border-color:var(--accent);background:rgba(0,212,255,.1);color:var(--accent);box-shadow:0 0 16px rgba(0,212,255,.15)}
+.slide-fields{overflow:hidden;transition:max-height .35s ease,opacity .3s;max-height:0;opacity:0}
+.slide-fields.open{max-height:220px;opacity:1}
+.inp{width:100%;padding:12px 14px;background:var(--bg);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:var(--mono);font-size:.85rem;outline:none;transition:border-color .2s;margin-bottom:14px}
+.inp:focus{border-color:var(--accent)}
+.btn{width:100%;padding:14px;border-radius:10px;border:none;background:linear-gradient(135deg,var(--accent2),var(--accent));color:#000;font-family:var(--mono);font-size:.85rem;font-weight:700;letter-spacing:1.5px;cursor:pointer;transition:opacity .2s,transform .1s;box-shadow:0 0 20px rgba(0,212,255,.2);margin-top:4px}
+.btn:active{transform:scale(.98);opacity:.9}
+.err{color:var(--red);font-size:.72rem;font-family:var(--mono);margin-top:10px;text-align:center;min-height:16px}
+
+/* ── DEPT SELECT ── */
+#s-dept{align-items:center;justify-content:center;background:radial-gradient(ellipse 80% 60% at 50% 100%,rgba(0,212,255,.06),transparent 70%),var(--bg);padding:24px 16px}
+.dept-header{text-align:center;margin-bottom:32px;animation:fadeUp .4s ease both}
+.dept-header .greet{font-family:var(--mono);font-size:.7rem;color:var(--text2);letter-spacing:2px;margin-bottom:6px}
+.dept-header h1{font-size:1.6rem;font-weight:700;color:#fff}
+.dept-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;width:100%;max-width:480px;animation:fadeUp .45s ease both}
+.dept-card{padding:28px 20px 22px;border-radius:18px;border:1px solid var(--border);background:var(--bg2);cursor:pointer;transition:all .25s;text-align:center;position:relative;overflow:hidden;-webkit-user-select:none;user-select:none}
+.dept-card::before{content:'';position:absolute;inset:0;opacity:0;transition:opacity .25s;border-radius:inherit}
+.dept-card.mold::before{background:radial-gradient(ellipse at 50% 0%,rgba(0,229,122,.14),transparent 70%)}
+.dept-card.dtfs::before{background:radial-gradient(ellipse at 50% 0%,rgba(0,212,255,.14),transparent 70%)}
+.dept-card:active::before,.dept-card:hover::before{opacity:1}
+.dept-card:active{transform:scale(.97)}
+.dept-card .di{font-size:2.4rem;margin-bottom:12px}
+.dept-card .dn{font-family:var(--mono);font-size:.95rem;font-weight:700;letter-spacing:2px;color:#fff;margin-bottom:4px}
+.dept-card .ds{font-size:.7rem;color:var(--text2);margin-bottom:14px}
+.mtags{display:flex;flex-wrap:wrap;gap:5px;justify-content:center}
+.mtag{padding:2px 8px;border-radius:999px;font-family:var(--mono);font-size:.58rem;background:var(--bg3);border:1px solid var(--border);color:var(--text3)}
+.back-link{text-align:center;margin-top:24px;font-size:.72rem;color:var(--text3);cursor:pointer;font-family:var(--mono);animation:fadeUp .5s ease both}
+
+/* ── TOPBAR ── */
+.topbar{display:flex;align-items:center;gap:10px;padding:12px 16px;background:var(--bg2);border-bottom:1px solid var(--border);flex-shrink:0;padding-top:calc(12px + env(safe-area-inset-top,0px))}
+.tb-logo{font-family:var(--mono);font-size:.72rem;color:var(--accent);letter-spacing:1.5px;flex-shrink:0}
+.tb-dept{font-family:var(--mono);font-size:.62rem;color:var(--text2);background:var(--bg3);border:1px solid var(--border);padding:2px 8px;border-radius:999px;letter-spacing:.5px;flex-shrink:0}
+.tb-role{font-family:var(--mono);font-size:.62rem;padding:2px 8px;border-radius:999px;flex-shrink:0}
+.tb-role.u{background:rgba(0,229,122,.1);color:var(--green);border:1px solid #00e57a33}
+.tb-role.a{background:rgba(0,212,255,.1);color:var(--accent);border:1px solid rgba(0,212,255,.3)}
+.tb-sp{flex:1}
+.tb-btn{padding:5px 10px;border-radius:8px;border:1px solid var(--border);background:none;color:var(--text3);font-family:var(--mono);font-size:.62rem;cursor:pointer;letter-spacing:.5px;white-space:nowrap;transition:all .2s}
+.tb-btn:hover,.tb-btn:active{color:var(--red);border-color:var(--red)}
+
+/* ── TABS (admin) ── */
+.tabs{display:flex;padding:12px 16px 0;border-bottom:1px solid var(--border);background:var(--bg2);gap:4px;flex-shrink:0;overflow-x:auto}
+.tab{padding:8px 16px;border-radius:8px 8px 0 0;border:1px solid transparent;border-bottom:none;background:none;color:var(--text2);font-family:var(--mono);font-size:.68rem;letter-spacing:.5px;cursor:pointer;white-space:nowrap;position:relative;bottom:-1px;transition:all .2s}
+.tab.active{background:var(--bg);border-color:var(--border);color:var(--accent)}
+
+/* ── SUMMARY CARDS ── */
+.summary{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:20px}
+.sc{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:10px 8px;text-align:center}
+.sc-lbl{font-size:.58rem;font-family:var(--mono);color:var(--text3);letter-spacing:.5px;text-transform:uppercase;margin-bottom:4px}
+.sc-val{font-size:1.3rem;font-weight:700;font-family:var(--mono)}
+.g{color:var(--green)}.y{color:var(--yellow)}.r{color:var(--red)}.b{color:var(--accent)}
+
+/* ── LEGEND ── */
+.legend{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:16px}
+.li{display:flex;align-items:center;gap:5px;font-size:.65rem;color:var(--text2);font-family:var(--mono)}
+.ld{width:9px;height:9px;border-radius:2px;flex-shrink:0}
+
+/* ── HEATMAP ── */
+.heatmap{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+@media(min-width:480px){.heatmap{grid-template-columns:repeat(3,1fr)}}
+@media(min-width:700px){.heatmap{grid-template-columns:repeat(4,1fr)}}
+
+.mc{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:14px 12px 10px;cursor:pointer;transition:all .2s;position:relative;overflow:hidden;-webkit-user-select:none;user-select:none}
+.mc::after{content:'';position:absolute;top:0;left:0;right:0;height:3px;border-radius:3px 3px 0 0;background:var(--border)}
+.mc.hg::after{background:var(--green);box-shadow:0 0 10px rgba(0,229,122,.4)}
+.mc.hy::after{background:var(--yellow);box-shadow:0 0 10px rgba(255,210,64,.4)}
+.mc.hr::after{background:var(--red);box-shadow:0 0 10px rgba(255,64,96,.5)}
+.mc:active{transform:scale(.97)}
+.mc-name{font-family:var(--mono);font-size:.78rem;font-weight:700;color:#fff;margin-bottom:8px}
+.mc-tags{display:flex;flex-wrap:wrap;gap:4px;min-height:24px}
+.etag{display:inline-flex;align-items:center;gap:3px;padding:2px 6px;border-radius:5px;font-family:var(--mono);font-size:.55rem}
+.etag.r{background:rgba(255,64,96,.15);color:var(--red);border:1px solid rgba(255,64,96,.3)}
+.etag.y{background:rgba(255,210,64,.12);color:var(--yellow);border:1px solid rgba(255,210,64,.3)}
+.etag.w{background:rgba(200,216,240,.06);color:var(--text2);border:1px solid var(--border)}
+.etag .cnt{font-weight:700}
+.mc-foot{margin-top:8px;font-size:.6rem;color:var(--text3);font-family:var(--mono)}
+.no-data{font-size:.65rem;color:var(--text3);font-family:var(--mono);font-style:italic}
+
+/* ── SECTION TITLE ── */
+.stitle{font-family:var(--mono);font-size:.65rem;color:var(--text2);letter-spacing:2px;text-transform:uppercase;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.stitle::after{content:'';flex:1;height:1px;background:var(--border)}
+
+/* ── DETAIL DRAWER ── */
+#drawer{position:fixed;inset:0;z-index:300;display:none}
+#drawer.open{display:block}
+#drawer-overlay{position:absolute;inset:0;background:rgba(0,0,0,.6);animation:fadeIn .25s ease}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+#drawer-panel{position:absolute;bottom:0;left:0;right:0;max-height:88vh;background:var(--bg2);border-radius:20px 20px 0 0;border-top:1px solid var(--border);display:flex;flex-direction:column;animation:slideUp .3s cubic-bezier(.34,1.3,.64,1)}
+@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.drawer-handle{width:40px;height:4px;background:var(--border2);border-radius:2px;margin:10px auto 0}
+.drawer-header{padding:14px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}
+.drawer-name{font-family:var(--mono);font-size:.95rem;font-weight:700;color:#fff}
+.drawer-dept{font-family:var(--mono);font-size:.6rem;color:var(--text2);background:var(--bg3);padding:2px 8px;border-radius:999px}
+.drawer-close{margin-left:auto;background:none;border:1px solid var(--border);border-radius:8px;color:var(--text2);padding:5px 10px;cursor:pointer;font-family:var(--mono);font-size:.65rem}
+.drawer-body{flex:1;overflow-y:auto;padding:16px 20px calc(16px + var(--safe-bottom))}
+.dp-lbl{font-family:var(--mono);font-size:.6rem;color:var(--text3);letter-spacing:1.5px;text-transform:uppercase;margin:16px 0 10px}
+.dp-lbl:first-child{margin-top:0}
+.err-tbl{width:100%;border-collapse:collapse}
+.err-tbl th{font-family:var(--mono);font-size:.58rem;color:var(--text3);letter-spacing:1px;text-align:left;padding:5px 6px;border-bottom:1px solid var(--border)}
+.err-tbl td{padding:7px 6px;font-family:var(--mono);font-size:.7rem;border-bottom:1px solid rgba(30,45,69,.5);vertical-align:middle}
+.err-tbl tr:last-child td{border-bottom:none}
+.cbadge{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:7px;font-weight:700;font-size:.75rem}
+.cbadge.r{background:rgba(255,64,96,.2);color:var(--red)}
+.cbadge.y{background:rgba(255,210,64,.15);color:var(--yellow)}
+.cbadge.w{background:rgba(200,216,240,.07);color:var(--text)}
+.img-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.img-grid img{width:100%;border-radius:10px;border:1px solid var(--border);cursor:pointer}
+
+/* ── MANAGE DATA ── */
+.machine-sel-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+.sel-group{display:flex;flex-direction:column;gap:6px;min-width:130px;flex:1}
+select{width:100%;padding:10px 12px;background:var(--bg2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:var(--mono);font-size:.75rem;outline:none;cursor:pointer}
+select:focus{border-color:var(--accent)}
+.drop-zone{border:2px dashed var(--border2);border-radius:14px;padding:32px 20px;text-align:center;cursor:pointer;transition:all .2s;background:var(--bg2);margin-bottom:16px}
+.drop-zone.drag,.drop-zone:active{border-color:var(--accent);background:rgba(0,212,255,.04)}
+.dz-icon{font-size:2rem;margin-bottom:8px}
+.dz-title{font-weight:600;color:#fff;font-size:.9rem;margin-bottom:4px}
+.dz-sub{font-size:.7rem;color:var(--text2)}
+.hint-box{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:20px;font-size:.68rem;color:var(--text2);font-family:var(--mono);line-height:1.7}
+.hint-box strong{color:var(--accent)}
+.up-list{display:flex;flex-direction:column;gap:8px}
+.up-item{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:12px 14px;display:flex;align-items:center;gap:10px}
+.up-icon{font-size:1.3rem;flex-shrink:0}
+.up-info{flex:1;min-width:0}
+.up-name{font-family:var(--mono);font-size:.72rem;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.up-meta{font-size:.62rem;color:var(--text3);font-family:var(--mono);margin-top:3px}
+.tag{padding:2px 7px;border-radius:5px;font-size:.58rem;font-family:var(--mono)}
+.tag.csv{background:rgba(0,229,122,.1);color:var(--green);border:1px solid rgba(0,229,122,.2)}
+.tag.img{background:rgba(255,210,64,.1);color:var(--yellow);border:1px solid rgba(255,210,64,.2)}
+.tag.ocr{background:rgba(0,212,255,.1);color:var(--accent);border:1px solid rgba(0,212,255,.2)}
+.upload-method-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:8px}
+@media(max-width:420px){.upload-method-grid{grid-template-columns:1fr}}
+.upload-method-card{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:20px 12px;text-align:center;cursor:pointer;transition:all .2s;-webkit-user-select:none;user-select:none}
+.upload-method-card:active{transform:scale(.96);border-color:var(--accent)}
+.upload-method-card:hover{border-color:var(--border2)}
+.um-icon{font-size:1.8rem;margin-bottom:8px}
+.um-title{font-weight:700;color:#fff;font-size:.82rem;margin-bottom:4px}
+.um-sub{font-size:.62rem;color:var(--text2);line-height:1.4}
+
+/* ── LOADING OVERLAY ── */
+#loading{position:fixed;inset:0;background:rgba(8,12,18,.85);z-index:500;display:none;align-items:center;justify-content:center;flex-direction:column;gap:14px}
+#loading.on{display:flex}
+.spinner{width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-msg{font-family:var(--mono);font-size:.75rem;color:var(--text2);letter-spacing:1px}
+
+/* ── TOAST ── */
+#toast{position:fixed;bottom:calc(24px + var(--safe-bottom));left:50%;transform:translateX(-50%) translateY(80px);background:var(--bg3);border:1px solid var(--border2);border-radius:10px;padding:10px 20px;font-family:var(--mono);font-size:.72rem;color:var(--text);box-shadow:0 8px 32px rgba(0,0,0,.5);z-index:600;transition:transform .35s cubic-bezier(.34,1.4,.64,1),opacity .35s;opacity:0;white-space:nowrap;max-width:90vw}
+#toast.on{transform:translateX(-50%) translateY(0);opacity:1}
+#toast.ok{border-color:rgba(0,229,122,.5);color:var(--green)}
+#toast.er{border-color:rgba(255,64,96,.5);color:var(--red)}
+
+/* ── IMG LIGHTBOX ── */
+#lightbox{position:fixed;inset:0;background:rgba(0,0,0,.9);z-index:700;display:none;align-items:center;justify-content:center}
+#lightbox.on{display:flex}
+#lightbox img{max-width:96vw;max-height:92vh;border-radius:10px;object-fit:contain}
+#lb-close{position:absolute;top:16px;right:16px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:6px 12px;cursor:pointer;font-family:var(--mono);font-size:.72rem}
+
+/* ── SYNC STATUS ── */
+.sync-row{display:flex;align-items:center;gap:6px;margin-bottom:16px;font-family:var(--mono);font-size:.65rem;color:var(--text3)}
+.sync-dot{width:7px;height:7px;border-radius:50%;background:var(--text3);flex-shrink:0}
+.sync-dot.ok{background:var(--green);box-shadow:0 0 6px rgba(0,229,122,.5)}
+.sync-dot.er{background:var(--red)}
+.sync-dot.loading{background:var(--yellow);animation:pulse .8s ease infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+</style>
+</head>
+<body>
+
+<!-- ══ SCREEN 1: LOGIN ══ -->
+<div class="screen active" id="s-login">
+  <div class="scroll-body" style="display:flex;align-items:center;justify-content:center;min-height:100%">
+    <div class="login-wrap">
+      <div class="logo-block">
+        <div class="logo-icon">⚙</div>
+        <div class="logo-title">EOL MONITOR</div>
+        <div class="logo-sub">MACHINE HEALTH SYSTEM</div>
+      </div>
+      <div class="card">
+        <div class="field-lbl" style="margin-bottom:10px">SELECT ROLE</div>
+        <div class="role-grid">
+          <button class="role-btn" id="rb-user" onclick="pickRole('USER')"><span class="icon">👤</span>USER</button>
+          <button class="role-btn" id="rb-admin" onclick="pickRole('ADMIN')"><span class="icon">🔑</span>ADMIN</button>
+        </div>
+        <div class="slide-fields" id="admin-fields">
+          <div class="field-lbl">USERNAME</div>
+          <input class="inp" type="text" id="inp-u" placeholder="username" autocomplete="off">
+          <div class="field-lbl">PASSWORD</div>
+          <input class="inp" type="password" id="inp-p" placeholder="password">
+        </div>
+        <button class="btn" onclick="doLogin()">ENTER SYSTEM</button>
+        <div class="err" id="lerr"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ SCREEN 2: DEPT ══ -->
+<div class="screen" id="s-dept">
+  <div class="scroll-body" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100%">
+    <div class="dept-header">
+      <div class="greet" id="dept-greet">WELCOME</div>
+      <h1>Select Department</h1>
+    </div>
+    <div class="dept-grid">
+      <div class="dept-card mold" onclick="pickDept('MOLD')">
+        <div class="di">🏭</div>
+        <div class="dn">MOLD</div>
+        <div class="ds">Mold Department</div>
+        <div class="mtags">
+          <span class="mtag">TOWA#43</span><span class="mtag">TOWA#44</span><span class="mtag">TOWA#45</span>
+          <span class="mtag">ASM#39</span><span class="mtag">ASM#35</span><span class="mtag">ASM#30</span>
+        </div>
+      </div>
+      <div class="dept-card dtfs" onclick="pickDept('DTFS')">
+        <div class="di">🔧</div>
+        <div class="dn">DTFS</div>
+        <div class="ds">DTFS Department</div>
+        <div class="mtags">
+          <span class="mtag">DEJ#11</span><span class="mtag">DEJ#10</span>
+          <span class="mtag">DEJ#13</span><span class="mtag">FORM#20</span>
+        </div>
+      </div>
+    </div>
+    <div class="back-link" onclick="go('s-login')">← Back to Login</div>
+  </div>
+</div>
+
+<!-- ══ SCREEN 3: USER DASHBOARD ══ -->
+<div class="screen" id="s-user">
+  <div class="topbar">
+    <span class="tb-logo">⚙ EOL</span>
+    <span class="tb-dept" id="u-dept-badge">MOLD</span>
+    <span class="tb-role u">USER</span>
+    <span class="tb-sp"></span>
+    <button class="tb-btn" onclick="go('s-dept')">⟵</button>
+    <button class="tb-btn" style="color:var(--red)" onclick="doLogout()">OUT</button>
+  </div>
+  <div class="scroll-body">
+    <div class="sync-row"><div class="sync-dot" id="u-sync-dot"></div><span id="u-sync-txt">Not synced</span><span style="margin-left:auto;cursor:pointer;color:var(--text2)" onclick="loadDashboard()">↻ Refresh</span></div>
+    <div class="stitle">Machine Health</div>
+    <div class="summary" id="u-summary"></div>
+    <div class="legend">
+      <div class="li"><div class="ld" style="background:var(--red)"></div>&gt;3 — Critical</div>
+      <div class="li"><div class="ld" style="background:var(--yellow)"></div>2 — Warning</div>
+      <div class="li"><div class="ld" style="background:var(--text)"></div>≤1 — Normal</div>
+      <div class="li"><div class="ld" style="background:var(--border)"></div>No Data</div>
+    </div>
+    <div class="heatmap" id="u-heatmap"></div>
+  </div>
+</div>
+
+<!-- ══ SCREEN 4: ADMIN DASHBOARD ══ -->
+<div class="screen" id="s-admin">
+  <div class="topbar">
+    <span class="tb-logo">⚙ EOL</span>
+    <span class="tb-dept" id="a-dept-badge">MOLD</span>
+    <span class="tb-role a">ADMIN</span>
+    <span class="tb-sp"></span>
+    <button class="tb-btn" onclick="go('s-dept')">⟵</button>
+    <button class="tb-btn" style="color:var(--red)" onclick="doLogout()">OUT</button>
+  </div>
+  <div class="tabs">
+    <button class="tab active" id="tab-dash" onclick="switchTab('dash')">📊 Dashboard</button>
+    <button class="tab" id="tab-manage" onclick="switchTab('manage')">📁 Manage Data</button>
+  </div>
+
+  <!-- Dashboard tab -->
+  <div id="tab-dash-body" class="scroll-body">
+    <div class="sync-row"><div class="sync-dot" id="a-sync-dot"></div><span id="a-sync-txt">Not synced</span><span style="margin-left:auto;cursor:pointer;color:var(--text2)" onclick="loadDashboard()">↻ Refresh</span></div>
+    <div class="stitle">Machine Health</div>
+    <div class="summary" id="a-summary"></div>
+    <div class="legend">
+      <div class="li"><div class="ld" style="background:var(--red)"></div>&gt;3 — Critical</div>
+      <div class="li"><div class="ld" style="background:var(--yellow)"></div>2 — Warning</div>
+      <div class="li"><div class="ld" style="background:var(--text)"></div>≤1 — Normal</div>
+      <div class="li"><div class="ld" style="background:var(--border)"></div>No Data</div>
+    </div>
+    <div class="heatmap" id="a-heatmap"></div>
+  </div>
+
+  <!-- Manage tab -->
+  <div id="tab-manage-body" class="scroll-body" style="display:none">
+    <div class="stitle">Select Machine</div>
+    <div class="machine-sel-row">
+      <div class="sel-group">
+        <div class="field-lbl">DEPT</div>
+        <select id="up-dept" onchange="updateUpMachines()">
+          <option value="MOLD">MOLD</option>
+          <option value="DTFS">DTFS</option>
+        </select>
+      </div>
+      <div class="sel-group">
+        <div class="field-lbl">MACHINE</div>
+        <select id="up-machine"></select>
+      </div>
+    </div>
+
+    <div class="stitle">Upload Method</div>
+    <div class="upload-method-grid">
+      <div class="upload-method-card" onclick="document.getElementById('cam-inp').click()">
+        <div class="um-icon">📷</div>
+        <div class="um-title">Take Photo</div>
+        <div class="um-sub">Camera → OCR auto-reads error log</div>
+        <input type="file" id="cam-inp" style="display:none" accept="image/*" capture="environment" onchange="handleImageCapture(event)">
+      </div>
+      <div class="upload-method-card" onclick="document.getElementById('gal-inp').click()">
+        <div class="um-icon">🖼️</div>
+        <div class="um-title">From Gallery</div>
+        <div class="um-sub">Choose existing photo → OCR reads it</div>
+        <input type="file" id="gal-inp" style="display:none" accept="image/*" onchange="handleImageCapture(event)">
+      </div>
+      <div class="upload-method-card" onclick="document.getElementById('csv-inp').click()">
+        <div class="um-icon">📋</div>
+        <div class="um-title">Upload CSV</div>
+        <div class="um-sub">Error log data file (.csv / .xlsx)</div>
+        <input type="file" id="csv-inp" style="display:none" accept=".csv,.xlsx" onchange="handleCSVUpload(event)">
+      </div>
+    </div>
+
+    <div class="hint-box" style="margin-top:16px">
+      <strong style="color:var(--accent)">📷 PHOTO MODE:</strong> Takes photo → OCR scans for error codes → preview to confirm before saving<br><br>
+      <strong style="color:var(--green)">📋 CSV MODE:</strong> Column named <span style="color:#fff">error_code</span> + optional <span style="color:#fff">count</span> column
+    </div>
+
+    <div class="stitle">Upload History</div>
+    <div id="up-list"><div style="text-align:center;padding:24px;color:var(--text3);font-family:var(--mono);font-size:.72rem">No uploads this session.</div></div>
+  </div>
+</div>
+
+<!-- OCR PREVIEW SCREEN -->
+<div class="screen" id="s-ocr">
+  <div class="topbar">
+    <span class="tb-logo">⚙ OCR SCAN</span>
+    <span class="tb-sp"></span>
+    <button class="tb-btn" onclick="cancelOCR()">✕ Cancel</button>
+  </div>
+  <div class="scroll-body">
+    <div class="stitle">Captured Image</div>
+    <div style="margin-bottom:16px;border-radius:12px;overflow:hidden;border:1px solid var(--border);max-height:220px;display:flex;align-items:center;justify-content:center;background:var(--bg3)">
+      <img id="ocr-img-preview" src="" alt="" style="max-width:100%;max-height:220px;object-fit:contain">
+    </div>
+
+    <div id="ocr-status-box" style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:16px;font-family:var(--mono);font-size:.72rem;color:var(--text2);text-align:center">
+      <div id="ocr-spinner-wrap" style="display:flex;align-items:center;justify-content:center;gap:10px">
+        <div class="spinner" style="width:20px;height:20px;border-width:2px"></div>
+        <span id="ocr-status-txt">Initialising OCR engine...</span>
+      </div>
+    </div>
+
+    <div id="ocr-results-wrap" style="display:none">
+      <div class="stitle">Detected Errors <span style="color:var(--text3);font-weight:400;font-size:.6rem">— tap count to edit</span></div>
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:14px">
+        <table style="width:100%;border-collapse:collapse" id="ocr-table">
+          <thead>
+            <tr>
+              <th style="font-family:var(--mono);font-size:.6rem;color:var(--text3);letter-spacing:1px;text-align:left;padding:10px 12px;border-bottom:1px solid var(--border)">ERROR CODE</th>
+              <th style="font-family:var(--mono);font-size:.6rem;color:var(--text3);letter-spacing:1px;text-align:center;padding:10px 12px;border-bottom:1px solid var(--border);width:80px">COUNT</th>
+              <th style="width:44px;border-bottom:1px solid var(--border)"></th>
+            </tr>
+          </thead>
+          <tbody id="ocr-table-body"></tbody>
+        </table>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:18px;align-items:center">
+        <input class="inp" id="add-code" placeholder="Add error code" style="margin:0;flex:1;font-size:.75rem;padding:10px 12px">
+        <input class="inp" id="add-count" placeholder="Count" type="number" min="1" value="1" style="margin:0;width:72px;font-size:.75rem;padding:10px 8px">
+        <button onclick="addOCRRow()" style="padding:10px 14px;border-radius:10px;border:1px solid var(--border2);background:var(--bg3);color:var(--accent);font-family:var(--mono);font-size:.72rem;cursor:pointer;white-space:nowrap">+ Add</button>
+      </div>
+      <div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:11px 14px;margin-bottom:18px;font-family:var(--mono);font-size:.7rem;color:var(--text2)">
+        Saving to: <strong style="color:#fff" id="ocr-machine-label">—</strong>
+      </div>
+      <div style="display:flex;gap:10px">
+        <button onclick="cancelOCR()" style="flex:1;padding:13px;border-radius:10px;border:1px solid var(--border);background:var(--bg2);color:var(--text2);font-family:var(--mono);font-size:.75rem;cursor:pointer">Cancel</button>
+        <button onclick="confirmOCR()" style="flex:2;padding:13px;border-radius:10px;border:none;background:linear-gradient(135deg,var(--accent2),var(--accent));color:#000;font-family:var(--mono);font-size:.82rem;font-weight:700;cursor:pointer;letter-spacing:1px">✓ CONFIRM &amp; SAVE</button>
+      </div>
+    </div>
+
+    <div id="ocr-no-results" style="display:none;text-align:center;padding:20px;font-family:var(--mono);font-size:.75rem;color:var(--text3)">
+      <div style="font-size:2rem;margin-bottom:10px">🔍</div>
+      No error codes detected automatically.<br>You can add them manually.<br><br>
+      <button onclick="showOCRResults([])" style="margin-top:8px;padding:10px 24px;border-radius:10px;border:1px solid var(--border2);background:var(--bg2);color:var(--accent);font-family:var(--mono);font-size:.72rem;cursor:pointer">Enter Manually →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MACHINE DETAIL: PIVOT HEATMAP SCREEN ══ -->
+<div class="screen" id="s-detail">
+  <div class="topbar">
+    <button class="tb-btn" onclick="closeDetail()" style="color:var(--accent)">⟵ Back</button>
+    <span class="tb-logo" id="det-machine-label" style="flex:1;text-align:center">MACHINE</span>
+    <span class="tb-dept" id="det-dept-label">DEPT</span>
+  </div>
+
+  <!-- Summary strip -->
+  <div id="det-summary-strip" style="display:flex;gap:8px;padding:12px 16px 0;background:var(--bg2);border-bottom:1px solid var(--border);flex-shrink:0;overflow-x:auto">
+    <!-- filled by JS -->
+  </div>
+
+  <!-- Legend -->
+  <div style="display:flex;gap:14px;padding:10px 16px;background:var(--bg2);border-bottom:1px solid var(--border);flex-shrink:0;flex-wrap:wrap">
+    <div style="display:flex;align-items:center;gap:5px;font-size:.62rem;color:var(--text2);font-family:var(--mono)"><div style="width:14px;height:14px;border-radius:3px;background:#c00020"></div>&gt;3 Critical</div>
+    <div style="display:flex;align-items:center;gap:5px;font-size:.62rem;color:var(--text2);font-family:var(--mono)"><div style="width:14px;height:14px;border-radius:3px;background:#ffd240"></div>2–3 Warning</div>
+    <div style="display:flex;align-items:center;gap:5px;font-size:.62rem;color:var(--text2);font-family:var(--mono)"><div style="width:14px;height:14px;border-radius:3px;background:#1e4d2a"></div>1 Normal</div>
+    <div style="display:flex;align-items:center;gap:5px;font-size:.62rem;color:var(--text2);font-family:var(--mono)"><div style="width:14px;height:14px;border-radius:3px;background:var(--bg3);border:1px solid var(--border)"></div>—</div>
+  </div>
+
+  <!-- Pivot table — horizontally scrollable -->
+  <div style="flex:1;overflow:auto;position:relative">
+    <div id="det-loading" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px;color:var(--text2);font-family:var(--mono);font-size:.75rem">
+      <div class="spinner"></div>Loading data...
+    </div>
+    <div id="det-table-wrap" style="display:none;min-width:max-content">
+      <table id="det-table" style="border-collapse:collapse;font-family:var(--mono)"></table>
+    </div>
+    <div id="det-empty" style="display:none;text-align:center;padding:60px 20px;color:var(--text3);font-family:var(--mono);font-size:.75rem">
+      <div style="font-size:2.5rem;margin-bottom:12px">📭</div>
+      No error data uploaded for this machine yet.
+    </div>
+  </div>
+</div>
+
+<!-- ══ LOADING ══ -->
+<div id="loading"><div class="spinner"></div><div class="loading-msg" id="loading-msg">LOADING...</div></div>
+
+<!-- ══ TOAST ══ -->
+<div id="toast"></div>
+
+<!-- ══ LIGHTBOX ══ -->
+<div id="lightbox" onclick="closeLB()">
+  <button id="lb-close" onclick="closeLB()">✕ Close</button>
+  <img id="lb-img" src="" alt="">
+</div>
+
+<script>
+/* ══════════════════════════════════
+   CONFIG — paste your Apps Script URL here
+══════════════════════════════════ */
+const API_URL = 'https://script.google.com/macros/s/AKfycbx_VdMAEut8HxEWRhtNyMrD3eIT92cohdkyYl4PHKsmdU6qwcpEO1Ekwf7y2XB0VCPRHw/exec';
+
+/* ══════════════════════════════════
+   CONSTANTS
+══════════════════════════════════ */
+const MACHINES = {
+  MOLD: ['TOWA#43','TOWA#44','TOWA#45','ASM#39','ASM#35','ASM#30'],
+  DTFS: ['DEJ#11','DEJ#10','DEJ#13','FORM#20'],
+};
+
+/* ══════════════════════════════════
+   STATE
+══════════════════════════════════ */
+let STATE = { role: null, dept: null };
+let CACHE = {};        // { dept: { machine: { errors, images } } }
+let MAPPINGS = {};     // { machine: { codeCol, countCol, skipRows, delimiter } }
+let UPLOAD_LOG = [];   // local log of uploads this session
+
+/* ══════════════════════════════════
+   NAV
+══════════════════════════════════ */
+function go(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+/* ══════════════════════════════════
+   LOGIN
+══════════════════════════════════ */
+function pickRole(r) {
+  STATE.role = r;
+  document.getElementById('rb-user').classList.toggle('sel', r==='USER');
+  document.getElementById('rb-admin').classList.toggle('sel', r==='ADMIN');
+  document.getElementById('admin-fields').classList.toggle('open', r==='ADMIN');
+  document.getElementById('lerr').textContent = '';
+}
+
+function doLogin() {
+  const err = document.getElementById('lerr');
+  if (!STATE.role) { err.textContent = '⚠ Select a role.'; return; }
+  if (STATE.role === 'ADMIN') {
+    const u = document.getElementById('inp-u').value.trim();
+    const p = document.getElementById('inp-p').value;
+    if (u !== 'EOLmaint' || p !== 'EOLmaint') { err.textContent = '⚠ Invalid credentials.'; return; }
+  }
+  err.textContent = '';
+  document.getElementById('dept-greet').textContent = `WELCOME, ${STATE.role}`;
+  go('s-dept');
+}
+
+function doLogout() {
+  STATE = { role: null, dept: null };
+  CACHE = {};
+  document.getElementById('rb-user').classList.remove('sel');
+  document.getElementById('rb-admin').classList.remove('sel');
+  document.getElementById('admin-fields').classList.remove('open');
+  document.getElementById('inp-u').value = '';
+  document.getElementById('inp-p').value = '';
+  document.getElementById('lerr').textContent = '';
+  go('s-login');
+}
+
+/* ══════════════════════════════════
+   DEPT SELECT
+══════════════════════════════════ */
+async function pickDept(dept) {
+  STATE.dept = dept;
+  if (STATE.role === 'USER') {
+    document.getElementById('u-dept-badge').textContent = dept;
+    go('s-user');
+    await loadDashboard();
+  } else {
+    document.getElementById('a-dept-badge').textContent = dept;
+    document.getElementById('up-dept').value = dept;
+    updateUpMachines();
+    switchTab('dash');
+    go('s-admin');
+    await loadDashboard();
+    await loadMappings();
+  }
+}
+
+/* ══════════════════════════════════
+   API CALLS
+══════════════════════════════════ */
+async function apiGet(params) {
+  const url = new URL(API_URL);
+  Object.entries(params).forEach(([k,v]) => url.searchParams.set(k,v));
+  const res = await fetch(url.toString());
+  return res.json();
+}
+
+async function apiPost(body) {
+  const res = await fetch(API_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  return res.json();
+}
+
+/* ══════════════════════════════════
+   LOAD DASHBOARD
+══════════════════════════════════ */
+async function loadDashboard() {
+  const dept = STATE.dept;
+  setSyncState('loading', 'Syncing with Google Sheets...');
+  try {
+    const result = await apiGet({ action: 'get_data', dept });
+    if (result.status !== 'ok') throw new Error(result.message);
+    CACHE = result.data || {};
+    renderHeatmap(dept);
+    setSyncState('ok', 'Synced · ' + new Date().toLocaleTimeString());
+  } catch(e) {
+    setSyncState('er', 'Sync failed — check API URL');
+    toast('Cannot reach Google Sheets. Check setup.', 'er');
+    // Still render with empty cache
+    renderHeatmap(dept);
+  }
+}
+
+function setSyncState(state, msg) {
+  const isUser = STATE.role === 'USER';
+  const dot = document.getElementById(isUser ? 'u-sync-dot' : 'a-sync-dot');
+  const txt = document.getElementById(isUser ? 'u-sync-txt' : 'a-sync-txt');
+  if (dot) { dot.className = 'sync-dot ' + state; }
+  if (txt) txt.textContent = msg;
+}
+
+async function loadMappings() {
+  try {
+    const res = await apiGet({ action: 'get_mappings' });
+    if (res.status === 'ok') MAPPINGS = res.mappings || {};
+  } catch(e) {}
+}
+
+/* ══════════════════════════════════
+   HEATMAP RENDER
+══════════════════════════════════ */
+function renderHeatmap(dept) {
+  const isUser = STATE.role === 'USER';
+  const hmId   = isUser ? 'u-heatmap' : 'a-heatmap';
+  const sumId  = isUser ? 'u-summary'  : 'a-summary';
+  const machines = MACHINES[dept];
+  const deptData = CACHE[dept] || {};
+
+  let healthy=0, warning=0, critical=0, nodata=0;
+  let html = '';
+
+  machines.forEach(machine => {
+    const md = deptData[machine] || {};
+    const errors = md.errors || [];
+    const images = md.images || [];
+    const maxCount = errors.length ? Math.max(...errors.map(e=>e.count)) : 0;
+
+    let cls = '';
+    if (!errors.length) { nodata++; cls = ''; }
+    else if (maxCount > 3) { critical++; cls = 'hr'; }
+    else if (maxCount === 2) { warning++; cls = 'hy'; }
+    else { healthy++; cls = 'hg'; }
+
+    const topE = [...errors].sort((a,b)=>b.count-a.count).slice(0,3);
+    const tagsHtml = topE.length
+      ? topE.map(e => {
+          const c = e.count>3?'r':e.count===2?'y':'w';
+          return `<span class="etag ${c}"><span class="cnt">${e.count}×</span>${e.code}</span>`;
+        }).join('')
+      : '<span class="no-data">No data</span>';
+
+    const total = errors.reduce((s,e)=>s+e.count,0);
+    html += `<div class="mc ${cls}" onclick="openDetail('${machine}','${dept}')">
+      <div class="mc-name">${machine}</div>
+      <div class="mc-tags">${tagsHtml}</div>
+      <div class="mc-foot">${total} errors · ${images.length} img</div>
+    </div>`;
+  });
+
+  document.getElementById(hmId).innerHTML = html;
+  document.getElementById(sumId).innerHTML = `
+    <div class="sc"><div class="sc-lbl">Total</div><div class="sc-val b">${machines.length}</div></div>
+    <div class="sc"><div class="sc-lbl">OK</div><div class="sc-val g">${healthy}</div></div>
+    <div class="sc"><div class="sc-lbl">Warn</div><div class="sc-val y">${warning}</div></div>
+    <div class="sc"><div class="sc-lbl">Crit</div><div class="sc-val r">${critical}</div></div>`;
+}
+
+/* ══════════════════════════════════
+   MACHINE DETAIL — PIVOT HEATMAP
+══════════════════════════════════ */
+let DETAIL_PREV_SCREEN = 's-user';
+
+async function openDetail(machine, dept) {
+  // Remember which screen to go back to
+  DETAIL_PREV_SCREEN = STATE.role === 'USER' ? 's-user' : 's-admin';
+
+  document.getElementById('det-machine-label').textContent = machine;
+  document.getElementById('det-dept-label').textContent = dept;
+  document.getElementById('det-loading').style.display = 'flex';
+  document.getElementById('det-table-wrap').style.display = 'none';
+  document.getElementById('det-empty').style.display = 'none';
+  document.getElementById('det-summary-strip').innerHTML = '';
+
+  go('s-detail');
+
+  try {
+    const res = await apiGet({ action: 'get_detail', dept, machine });
+    if (res.status !== 'ok') throw new Error(res.message);
+    renderPivotHeatmap(res);
+  } catch(e) {
+    document.getElementById('det-loading').style.display = 'none';
+    document.getElementById('det-empty').style.display = 'block';
+    document.getElementById('det-empty').innerHTML = `<div style="font-size:2rem;margin-bottom:12px">⚠</div>Failed to load: ${e.message}`;
+  }
+}
+
+function closeDetail() {
+  go(DETAIL_PREV_SCREEN);
+}
+
+function renderPivotHeatmap(data) {
+  const { dates, rows, dailyTotals, grandTotal } = data;
+
+  document.getElementById('det-loading').style.display = 'none';
+
+  if (!rows || !rows.length) {
+    document.getElementById('det-empty').style.display = 'block';
+    return;
+  }
+
+  // ── Summary strip ──
+  const strip = document.getElementById('det-summary-strip');
+  const critCount = rows.filter(r=>r.grandTotal>3).length;
+  const warnCount = rows.filter(r=>r.grandTotal===2||r.grandTotal===3).length;
+  const normCount = rows.filter(r=>r.grandTotal===1).length;
+  strip.innerHTML = `
+    <div style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:8px 14px;text-align:center;min-width:70px">
+      <div style="font-size:.55rem;color:var(--text3);letter-spacing:1px;margin-bottom:3px">ERRORS</div>
+      <div style="font-size:1.1rem;font-weight:700;color:var(--accent)">${rows.length}</div>
+    </div>
+    <div style="background:rgba(192,0,32,.12);border:1px solid rgba(192,0,32,.3);border-radius:8px;padding:8px 14px;text-align:center;min-width:70px">
+      <div style="font-size:.55rem;color:var(--text3);letter-spacing:1px;margin-bottom:3px">CRITICAL</div>
+      <div style="font-size:1.1rem;font-weight:700;color:#ff4060">${critCount}</div>
+    </div>
+    <div style="background:rgba(255,210,64,.1);border:1px solid rgba(255,210,64,.25);border-radius:8px;padding:8px 14px;text-align:center;min-width:70px">
+      <div style="font-size:.55rem;color:var(--text3);letter-spacing:1px;margin-bottom:3px">WARNING</div>
+      <div style="font-size:1.1rem;font-weight:700;color:var(--yellow)">${warnCount}</div>
+    </div>
+    <div style="background:rgba(0,229,122,.08);border:1px solid rgba(0,229,122,.2);border-radius:8px;padding:8px 14px;text-align:center;min-width:70px">
+      <div style="font-size:.55rem;color:var(--text3);letter-spacing:1px;margin-bottom:3px">NORMAL</div>
+      <div style="font-size:1.1rem;font-weight:700;color:var(--green)">${normCount}</div>
+    </div>
+    <div style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:8px 14px;text-align:center;min-width:70px">
+      <div style="font-size:.55rem;color:var(--text3);letter-spacing:1px;margin-bottom:3px">TOTAL</div>
+      <div style="font-size:1.1rem;font-weight:700;color:#fff">${grandTotal}</div>
+    </div>`;
+
+  // ── Pivot table ──
+  const COL_W    = 42;   // date column width px
+  const ROW_H    = 34;   // row height px
+  const CODE_W   = 110;  // error code column width px
+  const TOTAL_W  = 52;
+
+  const cellStyle = (count) => {
+    if (!count) return `background:var(--bg3);color:transparent`;
+    if (count > 3) return `background:#c00020;color:#fff;font-weight:700`;
+    if (count >= 2) return `background:#ffd240;color:#1a1a00;font-weight:700`;
+    return `background:#1e4d2a;color:#4ade80;font-weight:600`;
+  };
+
+  const thBase = `padding:7px 4px;font-family:var(--mono);font-size:.6rem;font-weight:600;letter-spacing:.5px;text-align:center;white-space:nowrap;position:sticky;top:0;z-index:10;background:var(--bg2);border-bottom:2px solid var(--border2);color:var(--text2)`;
+  const tdCode = `position:sticky;left:0;z-index:5;background:var(--bg2);padding:0 10px;font-family:var(--mono);font-size:.68rem;color:#fff;white-space:nowrap;border-right:1px solid var(--border2);border-bottom:1px solid var(--border);min-width:${CODE_W}px;max-width:${CODE_W}px`;
+  const tdTotal= `position:sticky;right:0;z-index:5;background:var(--bg2);padding:0 8px;text-align:center;font-family:var(--mono);font-size:.75rem;font-weight:700;border-left:1px solid var(--border2);border-bottom:1px solid var(--border)`;
+
+  let html = `<table style="border-collapse:collapse;font-family:var(--mono)">`;
+
+  // ── Header row 1: "Error Cases (Day)" + daily totals ──
+  html += `<thead>`;
+  html += `<tr style="height:${ROW_H}px">
+    <th style="${thBase};text-align:left;padding-left:10px;position:sticky;left:0;z-index:15;background:var(--bg2);min-width:${CODE_W}px;border-right:1px solid var(--border2)">Error Cases (Day)</th>`;
+  dates.forEach(d => {
+    const tot = dailyTotals[d] || 0;
+    html += `<th style="${thBase};width:${COL_W}px;color:${tot>3?'var(--red)':tot>=2?'var(--yellow)':'var(--text2)'}">
+      <div>${tot||''}</div>
+    </th>`;
+  });
+  html += `<th style="${thBase};position:sticky;right:0;z-index:15;background:var(--bg2);border-left:1px solid var(--border2);min-width:${TOTAL_W}px">Grand Total</th>`;
+  html += `</tr>`;
+
+  // ── Header row 2: date labels ──
+  html += `<tr style="height:28px">
+    <th style="${thBase};text-align:left;padding-left:10px;position:sticky;left:0;z-index:15;background:var(--bg2);border-right:1px solid var(--border2)">Row Labels</th>`;
+  dates.forEach(d => {
+    html += `<th style="${thBase};width:${COL_W}px;font-size:.55rem;color:var(--text2)">${d}</th>`;
+  });
+  html += `<th style="${thBase};position:sticky;right:0;z-index:15;background:var(--bg2);border-left:1px solid var(--border2)"></th></tr>`;
+  html += `</thead><tbody>`;
+
+  // ── Data rows ──
+  rows.forEach((row, ri) => {
+    const bg = ri % 2 === 0 ? 'var(--bg)' : 'var(--bg2)';
+    const tot = row.grandTotal;
+    const totColor = tot > 3 ? 'var(--red)' : tot >= 2 ? 'var(--yellow)' : 'var(--green)';
+    html += `<tr style="height:${ROW_H}px;background:${bg}">
+      <td style="${tdCode};background:${bg}">${row.code}</td>`;
+    dates.forEach(d => {
+      const cnt = row.days[d] || 0;
+      const cs = cellStyle(cnt);
+      html += `<td style="width:${COL_W}px;text-align:center;${cs};border-bottom:1px solid rgba(30,45,69,.4);font-size:.78rem">
+        ${cnt || ''}
+      </td>`;
+    });
+    html += `<td style="${tdTotal};color:${totColor};background:${bg}">${tot}</td>`;
+    html += `</tr>`;
+  });
+
+  html += `</tbody></table>`;
+
+  document.getElementById('det-table-wrap').innerHTML = html;
+  document.getElementById('det-table-wrap').style.display = 'block';
+}
+
+/* ══════════════════════════════════
+   ADMIN TABS
+══════════════════════════════════ */
+function switchTab(tab) {
+  document.getElementById('tab-dash-body').style.display = tab==='dash' ? '' : 'none';
+  document.getElementById('tab-manage-body').style.display = tab==='manage' ? '' : 'none';
+  document.getElementById('tab-dash').classList.toggle('active', tab==='dash');
+  document.getElementById('tab-manage').classList.toggle('active', tab==='manage');
+  if (tab === 'manage') renderUploadList();
+}
+
+/* ══════════════════════════════════
+   UPLOAD — MACHINE SELECT
+══════════════════════════════════ */
+function updateUpMachines() {
+  const dept = document.getElementById('up-dept').value;
+  const sel = document.getElementById('up-machine');
+  sel.innerHTML = MACHINES[dept].map(m=>`<option value="${m}">${m}</option>`).join('');
+}
+
+/* ══════════════════════════════════
+   OCR STATE
+══════════════════════════════════ */
+let OCR_STATE = { imageBase64: null, imageSrc: null, dept: null, machine: null, rows: [] };
+let tesseractWorker = null;
+
+/* ══════════════════════════════════
+   IMAGE CAPTURE → OCR
+══════════════════════════════════ */
+async function handleImageCapture(e) {
+  const file = e.target.files[0];
+  e.target.value = '';
+  if (!file) return;
+
+  const dept    = document.getElementById('up-dept').value;
+  const machine = document.getElementById('up-machine').value;
+
+  // Read as base64
+  const base64 = await readFileAsBase64(file);
+  OCR_STATE = { imageBase64: base64, imageSrc: base64, dept, machine, rows: [] };
+
+  // Show OCR screen
+  document.getElementById('ocr-img-preview').src = base64;
+  document.getElementById('ocr-machine-label').textContent = `${dept} › ${machine}`;
+  document.getElementById('ocr-results-wrap').style.display = 'none';
+  document.getElementById('ocr-no-results').style.display = 'none';
+  document.getElementById('ocr-status-box').style.display = '';
+  document.getElementById('ocr-spinner-wrap').style.display = 'flex';
+  document.getElementById('ocr-status-txt').textContent = 'Loading OCR engine...';
+  go('s-ocr');
+
+  // Run Tesseract
+  await runOCR(file);
+}
+
+async function runOCR(file) {
+  try {
+    setOCRStatus('Scanning image for text...');
+
+    // Load Tesseract from CDN
+    if (!window.Tesseract) {
+      await loadScript('https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/4.1.1/tesseract.min.js');
+    }
+
+    setOCRStatus('Reading error codes...');
+
+    const result = await Tesseract.recognize(file, 'eng', {
+      logger: m => {
+        if (m.status === 'recognizing text') {
+          setOCRStatus(`Reading... ${Math.round((m.progress||0)*100)}%`);
+        }
+      }
+    });
+
+    const rawText = result.data.text;
+    setOCRStatus('Extracting error codes...');
+    const parsed = extractErrorCodes(rawText);
+
+    if (parsed.length > 0) {
+      showOCRResults(parsed);
+    } else {
+      document.getElementById('ocr-status-box').style.display = 'none';
+      document.getElementById('ocr-no-results').style.display = 'block';
+    }
+
+  } catch(err) {
+    setOCRStatus('OCR failed: ' + err.message);
+    setTimeout(() => {
+      document.getElementById('ocr-status-box').style.display = 'none';
+      document.getElementById('ocr-no-results').style.display = 'block';
+    }, 2000);
+  }
+}
+
+function setOCRStatus(msg) {
+  document.getElementById('ocr-status-txt').textContent = msg;
+}
+
+function loadScript(src) {
+  return new Promise((res, rej) => {
+    const s = document.createElement('script');
+    s.src = src; s.onload = res; s.onerror = rej;
+    document.head.appendChild(s);
+  });
+}
+
+/* ══════════════════════════════════
+   ERROR CODE EXTRACTION FROM OCR TEXT
+   Handles: machine screen logs, printed tables, mixed
+══════════════════════════════════ */
+function extractErrorCodes(text) {
+  const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+  const counts = {};
+
+  // Pattern 1: codes like E34-06-01, A123, ERR_001, AL-123, F001, etc.
+  // Also handles codes like "E3406-01", "ERR001", "ALARM123"
+  const codePattern = /\b([A-Z]{1,5}[-_]?\d{2,6}(?:[-_]\d{2,4})*|[A-Z]{2,6}\d{3,6})\b/g;
+
+  // Pattern 2: look for "count" numbers near codes (e.g. "E34-06-01  5 times" or "E34-06-01: 3")
+  const countNearCode = /([A-Z]{1,5}[-_]?\d{2,6}(?:[-_]\d{2,4})*|[A-Z]{2,6}\d{3,6})[^\d\n]{0,20}?(\d{1,4})/;
+
+  lines.forEach(line => {
+    // Skip lines that are clearly headers/dates/noise
+    if (/^[\d\/\-\:\s]+$/.test(line)) return;
+    if (line.length < 3) return;
+
+    // Try to find code + count on same line
+    const cm = line.match(countNearCode);
+    if (cm) {
+      const code  = cm[1].toUpperCase().trim();
+      const count = parseInt(cm[2]) || 1;
+      // Sanity: count should be reasonable (1-9999)
+      if (count > 0 && count < 10000) {
+        counts[code] = (counts[code] || 0) + count;
+        return;
+      }
+    }
+
+    // Otherwise extract codes and count each occurrence as 1
+    let m;
+    codePattern.lastIndex = 0;
+    while ((m = codePattern.exec(line)) !== null) {
+      const code = m[1].toUpperCase().trim();
+      counts[code] = (counts[code] || 0) + 1;
+    }
+  });
+
+  // Convert to sorted array
+  return Object.entries(counts)
+    .map(([code, count]) => ({ code, count }))
+    .sort((a, b) => b.count - a.count);
+}
+
+/* ══════════════════════════════════
+   OCR RESULTS UI
+══════════════════════════════════ */
+function showOCRResults(rows) {
+  OCR_STATE.rows = rows.map(r => ({ ...r }));
+  document.getElementById('ocr-status-box').style.display = 'none';
+  document.getElementById('ocr-no-results').style.display = 'none';
+  document.getElementById('ocr-results-wrap').style.display = 'block';
+  renderOCRTable();
+}
+
+function renderOCRTable() {
+  const tbody = document.getElementById('ocr-table-body');
+  if (!OCR_STATE.rows.length) {
+    tbody.innerHTML = `<tr><td colspan="3" style="padding:14px;text-align:center;font-family:var(--mono);font-size:.7rem;color:var(--text3)">No entries yet — add manually above.</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = OCR_STATE.rows.map((r, i) => {
+    const cls = r.count > 3 ? 'var(--red)' : r.count === 2 ? 'var(--yellow)' : 'var(--text)';
+    return `<tr>
+      <td style="padding:9px 12px;font-family:var(--mono);font-size:.75rem;color:#fff;border-bottom:1px solid rgba(30,45,69,.5)">${r.code}</td>
+      <td style="padding:9px 12px;text-align:center;border-bottom:1px solid rgba(30,45,69,.5)">
+        <input type="number" min="1" value="${r.count}" onchange="updateOCRCount(${i},this.value)"
+          style="width:56px;padding:5px;text-align:center;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:${cls};font-family:var(--mono);font-size:.8rem;font-weight:700;outline:none">
+      </td>
+      <td style="padding:9px 8px;text-align:center;border-bottom:1px solid rgba(30,45,69,.5)">
+        <button onclick="removeOCRRow(${i})" style="background:rgba(255,64,96,.08);border:1px solid rgba(255,64,96,.25);color:var(--red);border-radius:6px;padding:4px 8px;font-size:.65rem;cursor:pointer;font-family:var(--mono)">✕</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function updateOCRCount(i, val) {
+  OCR_STATE.rows[i].count = parseInt(val) || 1;
+}
+
+function removeOCRRow(i) {
+  OCR_STATE.rows.splice(i, 1);
+  renderOCRTable();
+}
+
+function addOCRRow() {
+  const code  = document.getElementById('add-code').value.trim().toUpperCase();
+  const count = parseInt(document.getElementById('add-count').value) || 1;
+  if (!code) { toast('Enter an error code', 'er'); return; }
+  const existing = OCR_STATE.rows.find(r => r.code === code);
+  if (existing) existing.count += count;
+  else OCR_STATE.rows.push({ code, count });
+  document.getElementById('add-code').value = '';
+  document.getElementById('add-count').value = '1';
+  document.getElementById('ocr-results-wrap').style.display = 'block';
+  document.getElementById('ocr-no-results').style.display = 'none';
+  renderOCRTable();
+}
+
+function addOCRRowManual() {
+  const code  = document.getElementById('add-code2') ? document.getElementById('add-code2').value.trim().toUpperCase() : '';
+  const count = parseInt(document.getElementById('add-count2') ? document.getElementById('add-count2').value : '1') || 1;
+  if (!code) return;
+  OCR_STATE.rows.push({ code, count });
+  showOCRResults(OCR_STATE.rows);
+}
+
+function cancelOCR() {
+  go('s-admin');
+  switchTab('manage');
+}
+
+async function confirmOCR() {
+  if (!OCR_STATE.rows.length) { toast('No error data to save.', 'er'); return; }
+
+  const { dept, machine, rows, imageBase64 } = OCR_STATE;
+  showLoading('Saving to Google Sheets...');
+
+  try {
+    // Build a simple CSV string from the OCR rows
+    const csvText = 'error_code,count\n' + rows.map(r => `${r.code},${r.count}`).join('\n');
+
+    // Upload parsed data as CSV
+    const res = await apiPost({
+      action: 'upload_csv',
+      dept, machine,
+      filename: `OCR_${machine}_${new Date().toISOString().slice(0,10)}.csv`,
+      csvText,
+      mapping: { codeCol: 'error_code', countCol: 'count', skipRows: 1, delimiter: ',' },
+      uploadDate: fmtDateLabel(new Date()),
+    });
+
+    // Also save the original image
+    await apiPost({
+      action: 'upload_image',
+      dept, machine,
+      filename: `photo_${machine}_${Date.now()}.jpg`,
+      base64: imageBase64,
+    });
+
+    hideLoading();
+
+    if (res.status === 'ok') {
+      toast(`✓ Saved ${rows.length} error types for ${machine}`, 'ok');
+      UPLOAD_LOG.push({
+        dept, machine,
+        name: `OCR scan — ${rows.length} error types`,
+        type: 'ocr',
+        ts: new Date().toISOString(),
+        summary: rows.map(r=>`${r.code}:${r.count}`).join(', ')
+      });
+      renderUploadList();
+      await loadDashboard();
+      go('s-admin');
+      switchTab('dash');
+    } else {
+      toast('Save failed: ' + res.message, 'er');
+    }
+  } catch(err) {
+    hideLoading();
+    toast('Error: ' + err.message, 'er');
+  }
+}
+
+/* ══════════════════════════════════
+   CSV UPLOAD
+══════════════════════════════════ */
+async function handleCSVUpload(e) {
+  const file = e.target.files[0];
+  e.target.value = '';
+  if (!file) return;
+
+  const dept    = document.getElementById('up-dept').value;
+  const machine = document.getElementById('up-machine').value;
+  await uploadCSV(file, dept, machine);
+}
+
+async function uploadCSV(file, dept, machine) {
+  showLoading(`Parsing ${file.name}...`);
+  try {
+    const text = await readFileAsText(file);
+    const mapping = MAPPINGS[machine] || {};
+    const counts  = parseCSVLocal(text, mapping);
+
+    if (!Object.keys(counts).length) {
+      hideLoading();
+      toast('No error codes found. Check column names.', 'er');
+      return;
+    }
+
+    showLoading('Uploading to Google Sheets...');
+    const res = await apiPost({
+      action: 'upload_csv',
+      dept, machine,
+      filename: file.name,
+      csvText: text,
+      mapping,
+      uploadDate: fmtDateLabel(new Date()),
+    });
+
+    hideLoading();
+    if (res.status === 'ok') {
+      toast(`✓ ${file.name} — ${res.inserted} error types`, 'ok');
+      UPLOAD_LOG.push({ dept, machine, name: file.name, type:'csv', ts: new Date().toISOString(), summary: `${res.inserted} types` });
+      renderUploadList();
+      await loadDashboard();
+    } else {
+      toast('Upload failed: ' + res.message, 'er');
+    }
+  } catch(e) {
+    hideLoading();
+    toast('Error: ' + e.message, 'er');
+  }
+}
+
+/* ══════════════════════════════════
+   CSV PARSER (client-side preview)
+══════════════════════════════════ */
+function parseCSVLocal(text, mapping) {
+  const m = mapping || {};
+  const delim = m.delimiter || ',';
+  const skipRows = parseInt(m.skipRows || 1);
+  const codeColName  = (m.codeCol  || '').toLowerCase().trim();
+  const countColName = (m.countCol || '').toLowerCase().trim();
+
+  const lines = text.split(/\r?\n/).filter(l=>l.trim());
+  if (lines.length < skipRows + 1) return {};
+
+  const headerLine = lines[skipRows - 1];
+  const header = headerLine.split(delim).map(h=>h.trim().replace(/^["']|["']$/g,'').toLowerCase());
+
+  const codeNames = codeColName ? [codeColName] : ['error_code','error','code','fault','alarm','errorcode','err_code','alarm_code','fault_code'];
+  let codeIdx = -1;
+  for (const n of codeNames) {
+    codeIdx = header.findIndex(h=>h===n||h.replace(/[\s_]/g,'')===n.replace(/[\s_]/g,''));
+    if (codeIdx>=0) break;
+  }
+  if (codeIdx<0) codeIdx=0;
+
+  const countNames = countColName ? [countColName] : ['count','qty','quantity','occurrences','times','frequency','cnt'];
+  let countIdx = -1;
+  for (const n of countNames) {
+    countIdx = header.findIndex(h=>h===n||h.replace(/[\s_]/g,'')===n.replace(/[\s_]/g,''));
+    if (countIdx>=0) break;
+  }
+
+  const counts = {};
+  for (let i=skipRows; i<lines.length; i++) {
+    const cells = lines[i].split(delim).map(c=>c.trim().replace(/^["']|["']$/g,''));
+    const code = cells[codeIdx];
+    if (!code) continue;
+    if (countIdx>=0 && cells[countIdx]) {
+      counts[code] = (counts[code]||0) + (parseInt(cells[countIdx])||1);
+    } else {
+      counts[code] = (counts[code]||0) + 1;
+    }
+  }
+  return counts;
+}
+
+/* ══════════════════════════════════
+   UPLOAD LIST
+══════════════════════════════════ */
+function renderUploadList() {
+  const el = document.getElementById('up-list');
+  if (!UPLOAD_LOG.length) {
+    el.innerHTML = '<div style="text-align:center;padding:24px;color:var(--text3);font-family:var(--mono);font-size:.72rem">No uploads this session.</div>';
+    return;
+  }
+  const icons = { ocr:'🔍', img:'🖼️', csv:'📋' };
+  el.innerHTML = '<div class="up-list">' + [...UPLOAD_LOG].reverse().map(u => `
+    <div class="up-item">
+      <div class="up-icon">${icons[u.type]||'📋'}</div>
+      <div class="up-info">
+        <div class="up-name">${u.name}</div>
+        <div class="up-meta">${u.dept} · ${u.machine}${u.summary?' · '+u.summary:''}</div>
+      </div>
+      <span class="tag ${u.type}">${u.type.toUpperCase()}</span>
+    </div>`).join('') + '</div>';
+}
+
+/* ══════════════════════════════════
+   FILE READERS
+══════════════════════════════════ */
+function readFileAsText(file) {
+  return new Promise((res,rej) => {
+    const r = new FileReader();
+    r.onload = e => res(e.target.result);
+    r.onerror = () => rej(new Error('Read failed'));
+    r.readAsText(file);
+  });
+}
+
+function readFileAsBase64(file) {
+  return new Promise((res,rej) => {
+    const r = new FileReader();
+    r.onload = e => res(e.target.result); // data:image/...;base64,...
+    r.onerror = () => rej(new Error('Read failed'));
+    r.readAsDataURL(file);
+  });
+}
+
+/* ══════════════════════════════════
+   LIGHTBOX
+══════════════════════════════════ */
+function openLB(img) {
+  document.getElementById('lb-img').src = img.src;
+  document.getElementById('lightbox').classList.add('on');
+}
+function closeLB() { document.getElementById('lightbox').classList.remove('on'); }
+
+/* ══════════════════════════════════
+   LOADING & TOAST
+══════════════════════════════════ */
+function showLoading(msg) {
+  document.getElementById('loading-msg').textContent = msg || 'LOADING...';
+  document.getElementById('loading').classList.add('on');
+}
+function hideLoading() { document.getElementById('loading').classList.remove('on'); }
+
+let _tt;
+function toast(msg, type='ok') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = `on ${type}`;
+  clearTimeout(_tt);
+  _tt = setTimeout(()=>t.className='', 3500);
+}
+
+/* ══════════════════════════════════
+   DATE HELPER
+══════════════════════════════════ */
+function fmtDateLabel(d) {
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return `${d.getDate()}-${months[d.getMonth()]}`;
+}
+
+/* ══════════════════════════════════
+   INIT
+══════════════════════════════════ */
+updateUpMachines();
+</script>
+</body>
+</html>
